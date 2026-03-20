@@ -271,6 +271,7 @@ export default function ScenarioPage() {
     (optionId: string) => {
       if (!currentStep?.decision || !instance) return;
       setDecisionDisabled(true);
+      setShowChoices(false);
 
       const option = currentStep.decision.options.find((o) => o.id === optionId);
       if (!option) return;
