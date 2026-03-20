@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { loadScenario } from '@/lib/scenarios';
 import { initScenario } from '@/lib/engine/randomise';
-import { streamAgentResponse, fetchAgentReview, type AgentRequest, type ReviewResult } from '@/lib/claude';
+import { streamAgentResponse, fetchAgentReview, fetchGeneratedScenario, type AgentRequest, type ReviewResult } from '@/lib/claude';
 import { isScenarioUnlocked, saveDecision, completeScenario } from '@/lib/progress';
 import type { Scenario, ScenarioInstance, Step, DecisionOption } from '@/lib/scenarios/types';
 import ProgressBar from '@/components/simulator/ProgressBar';
@@ -73,6 +73,10 @@ export default function ScenarioPage() {
   const [showChoices, setShowChoices] = useState(false);
   const [review, setReview] = useState<ReviewData | null>(null);
   const [reviewLoading, setReviewLoading] = useState(false);
+  const [generatedHumanInstruction, setGeneratedHumanInstruction] = useState('');
+  const [generatedKeyInsight, setGeneratedKeyInsight] = useState('');
+  const [generatedRealWorldContext, setGeneratedRealWorldContext] = useState('');
+  const [isGenerating, setIsGenerating] = useState(false);
 
   const reasoningTextRef = useRef('');
   const lastSavedTextRef = useRef('');
@@ -88,18 +92,43 @@ export default function ScenarioPage() {
     setCurrentReasoningLabel(newLabel);
   }, []);
 
-  // Load scenario
+  // Load scenario — try dynamic generation first, fallback to hardcoded
   useEffect(() => {
     if (!scenarioId) return;
     if (!isScenarioUnlocked(scenarioId)) {
       router.push('/');
       return;
     }
-    loadScenario(scenarioId).then((s) => {
-      setScenario(s);
-      const inst = initScenario(s);
-      setInstance(inst);
-    });
+
+    let cancelled = false;
+    setIsGenerating(true);
+
+    fetchGeneratedScenario(scenarioId)
+      .then((generated) => {
+        if (cancelled) return;
+        setInstance({
+          scenarioId,
+          variables: generated.variables || {},
+          steps: generated.steps,
+        });
+        setGeneratedHumanInstruction(generated.humanInstruction);
+        setGeneratedKeyInsight(generated.keyInsight);
+        setGeneratedRealWorldContext(generated.realWorldContext);
+        setIsGenerating(false);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        // Fallback to hardcoded scenario
+        loadScenario(scenarioId).then((s) => {
+          if (cancelled) return;
+          setScenario(s);
+          const inst = initScenario(s);
+          setInstance(inst);
+          setIsGenerating(false);
+        });
+      });
+
+    return () => { cancelled = true; };
   }, [scenarioId, router]);
 
   const currentStep: Step | null =
@@ -107,8 +136,8 @@ export default function ScenarioPage() {
       ? instance.steps[currentStepIndex]
       : null;
 
-  const humanInstruction =
-    instance && scenario
+  const humanInstruction = generatedHumanInstruction
+    || (instance && scenario
       ? scenario.humanInstructionTemplate.replace(
           /\{\{(\w+)\}\}/g,
           (_, key) => {
@@ -118,7 +147,7 @@ export default function ScenarioPage() {
             return String(val ?? '');
           }
         )
-      : '';
+      : '');
 
   // Auto-advance for briefing and data_reveal steps
   useEffect(() => {
@@ -134,7 +163,7 @@ export default function ScenarioPage() {
     }
     if (currentStep.type === 'data_reveal') {
       // Generate reasoning for data reveal
-      if (instance && scenario) {
+      if (instance) {
         saveReasoningAndReset(`Step ${currentStepIndex + 1}: Analysis`);
         setIsStreaming(true);
         const controller = new AbortController();
@@ -164,7 +193,7 @@ export default function ScenarioPage() {
       }
     } else if (currentStep.type === 'decision') {
       // Generate pre-decision reasoning
-      if (instance && scenario && !reasoningTextRef.current) {
+      if (instance && !reasoningTextRef.current) {
         saveReasoningAndReset(`Step ${currentStepIndex + 1}: Decision`);
         setIsStreaming(true);
         const controller = new AbortController();
@@ -224,7 +253,7 @@ export default function ScenarioPage() {
 
   const handleDecision = useCallback(
     (optionId: string) => {
-      if (!currentStep?.decision || !instance || !scenario) return;
+      if (!currentStep?.decision || !instance) return;
       setDecisionDisabled(true);
 
       const option = currentStep.decision.options.find((o) => o.id === optionId);
@@ -276,9 +305,7 @@ export default function ScenarioPage() {
   );
 
   const handleReplay = () => {
-    if (!scenario) return;
-    const inst = initScenario(scenario);
-    setInstance(inst);
+    setInstance(null);
     setCurrentStepIndex(0);
     setPhase('briefing');
     setReasoningText('');
@@ -292,14 +319,42 @@ export default function ScenarioPage() {
     setShowChoices(false);
     setReview(null);
     setReviewLoading(false);
+    setGeneratedHumanInstruction('');
+    setGeneratedKeyInsight('');
+    setGeneratedRealWorldContext('');
+
+    // Re-generate a new scenario
+    setIsGenerating(true);
+    fetchGeneratedScenario(scenarioId)
+      .then((generated) => {
+        setInstance({
+          scenarioId,
+          variables: generated.variables || {},
+          steps: generated.steps,
+        });
+        setGeneratedHumanInstruction(generated.humanInstruction);
+        setGeneratedKeyInsight(generated.keyInsight);
+        setGeneratedRealWorldContext(generated.realWorldContext);
+        setIsGenerating(false);
+      })
+      .catch(() => {
+        loadScenario(scenarioId).then((s) => {
+          setScenario(s);
+          const inst = initScenario(s);
+          setInstance(inst);
+          setIsGenerating(false);
+        });
+      });
   };
 
-  if (!scenario || !instance) {
+  if (!instance) {
     return (
       <div className="flex-1 flex items-center justify-center bg-[#1D1D1F]">
         <div className="text-center">
           <div className="w-8 h-8 border-2 border-[#0071E3] border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-sm text-[#6E6E73] font-mono">Loading scenario...</p>
+          <p className="text-sm text-[#6E6E73] font-mono">
+            {isGenerating ? 'Generating your unique scenario...' : 'Loading scenario...'}
+          </p>
         </div>
       </div>
     );
@@ -324,8 +379,8 @@ export default function ScenarioPage() {
           scenarioTitle={scenarioTitles[scenarioId] || ''}
           success={decisions.filter((d) => d.wasOptimal).length >= decisions.length / 2}
           decisions={decisions}
-          keyInsight={keyInsights[scenarioId] || ''}
-          realWorldContext={realWorldContexts[scenarioId] || ''}
+          keyInsight={generatedKeyInsight || keyInsights[scenarioId] || ''}
+          realWorldContext={generatedRealWorldContext || realWorldContexts[scenarioId] || ''}
           nextScenarioId={nextScenarios[scenarioId]}
           onReplay={handleReplay}
           review={review}

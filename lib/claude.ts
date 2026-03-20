@@ -9,6 +9,25 @@ export interface AgentRequest {
   reasoningLog?: string;
 }
 
+import type { GeneratedScenario } from '@/lib/scenarios/types';
+
+export async function fetchGeneratedScenario(
+  scenarioId: string,
+  previousStorylines?: string[]
+): Promise<GeneratedScenario> {
+  const response = await fetch('/api/agent/generate', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ scenarioId, previousStorylines }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Generation failed: ${response.status}`);
+  }
+
+  return response.json();
+}
+
 export interface ReviewResult {
   right: string[];
   wrong: string[];
