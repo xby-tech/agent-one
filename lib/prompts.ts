@@ -39,16 +39,17 @@ Narrate what happens next from the agent's perspective. Describe the technical p
 
 export function buildReviewPrompt(claudeContext: string, reasoningLog: string): string {
   const logSection = reasoningLog ? `\nReasoning context:\n${reasoningLog}\n` : '';
-  return `Here are the decisions made during this scenario:
+  return `A user was playing an AI agent simulator and made the following decisions at each decision point. Review THEIR choices (not the AI reasoning — the user may have chosen differently from what the AI recommended).
 
+The user's decisions:
 ${claudeContext}
 ${logSection}
-Based on the decisions above, provide a brief performance review. Respond in EXACTLY this JSON format, no other text:
+Based on the USER's decisions above, provide a brief performance review. Respond in EXACTLY this JSON format, no other text:
 {"right":["bullet 1","bullet 2","bullet 3"],"wrong":["bullet 1","bullet 2"]}
 
 Rules:
-- "right": 2-4 bullets on what the agent did well (good reasoning, optimal choices, correct infrastructure knowledge)
-- "wrong": 1-3 bullets on mistakes, suboptimal choices, or missed considerations. If all decisions were optimal, note areas where the reasoning could have been deeper.
+- "right": 2-4 bullets on what the user did well (optimal choices, good payment infrastructure judgement)
+- "wrong": 1-3 bullets on suboptimal choices the user made and why a different option would have been better. If all decisions were optimal, suggest areas where even deeper reasoning would help.
 - Each bullet should be 1 short sentence, written in second person ("You chose...", "You correctly identified...")
-- Be specific, referencing actual decisions and payment concepts from the scenario`;
+- Be specific, referencing the actual options chosen and payment concepts from the scenario`;
 }
