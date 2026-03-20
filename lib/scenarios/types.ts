@@ -77,26 +77,6 @@ export interface DecisionOption {
   claudeReactionPrompt: string;
 }
 
-export interface GeneratedScenario {
-  humanInstruction: string;
-  variables: ScenarioVariant;
-  keyInsight: string;
-  realWorldContext: string;
-  steps: Step[];
-}
-
-export interface ThemeConfig {
-  id: string;
-  theme: string;
-  title: string;
-  subtitle: string;
-  difficulty: 'Beginner' | 'Intermediate' | 'Advanced' | 'Expert';
-  domainContext: string;
-  stepPattern: Array<'briefing' | 'data_reveal' | 'decision' | 'outcome'>;
-  keyInfrastructure: string[];
-  exampleStorylines: string[];
-}
-
 export interface ScenarioProgress {
   scenarioId: string;
   completed: boolean;
