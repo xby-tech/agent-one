@@ -2,8 +2,8 @@ import { ScenarioVariant } from '@/lib/scenarios/types';
 
 export const scenario3Variants: ScenarioVariant[] = [
   {
-    recipientName: "Yousuf",
-    recipientRelation: "father",
+    recipientName: "Jeff",
+    recipientRelation: "family member",
     recipientCity: "Lahore",
     recipientCountry: "Pakistan",
     recipientBank: "MCB Bank",
@@ -16,8 +16,8 @@ export const scenario3Variants: ScenarioVariant[] = [
     complianceRisk: "enhanced screening (common for Pakistan corridor)"
   },
   {
-    recipientName: "Maria",
-    recipientRelation: "sister",
+    recipientName: "Jeff",
+    recipientRelation: "family member",
     recipientCity: "Manila",
     recipientCountry: "Philippines",
     recipientBank: "BDO Unibank",
@@ -30,8 +30,8 @@ export const scenario3Variants: ScenarioVariant[] = [
     complianceRisk: "standard screening"
   },
   {
-    recipientName: "Ahmed",
-    recipientRelation: "brother",
+    recipientName: "Jeff",
+    recipientRelation: "family member",
     recipientCity: "Dubai",
     recipientCountry: "UAE",
     recipientBank: "Emirates NBD",
@@ -44,8 +44,8 @@ export const scenario3Variants: ScenarioVariant[] = [
     complianceRisk: "source of funds required (business purpose)"
   },
   {
-    recipientName: "Priya",
-    recipientRelation: "mother",
+    recipientName: "Jeff",
+    recipientRelation: "family member",
     recipientCity: "Chennai",
     recipientCountry: "India",
     recipientBank: "HDFC Bank",
