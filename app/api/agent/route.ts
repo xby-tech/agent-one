@@ -54,7 +54,7 @@ export async function POST(request: Request) {
     async start(controller) {
       try {
         const completion = await client.chat.completions.create({
-          model: 'grok-4.1-fast',
+          model: 'grok-4-1-fast-reasoning',
           max_tokens: 300,
           stream: true,
           messages: [
