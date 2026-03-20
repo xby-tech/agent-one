@@ -54,7 +54,7 @@ export async function POST(request: Request) {
     async start(controller) {
       try {
         const completion = await client.chat.completions.create({
-          model: 'grok-3-fast',
+          model: 'grok-4.1-fast',
           max_tokens: 300,
           stream: true,
           messages: [
@@ -75,10 +75,11 @@ export async function POST(request: Request) {
         controller.enqueue(encoder.encode('data: [DONE]\n\n'));
         controller.close();
       } catch (error) {
-        console.error('API error:', error);
+        const errMsg = error instanceof Error ? error.message : 'Unknown error';
+        console.error('API error:', errMsg);
         controller.enqueue(
           encoder.encode(
-            `data: ${JSON.stringify({ error: 'API error' })}\n\n`
+            `data: ${JSON.stringify({ error: errMsg })}\n\n`
           )
         );
         controller.close();

@@ -21,8 +21,9 @@ export async function streamAgentResponse(
   });
 
   if (!response.ok) {
-    const error = await response.text();
-    throw new Error(error || 'API request failed');
+    const errorText = await response.text();
+    onChunk(`[Error: ${response.status} - ${errorText || 'API request failed'}]`);
+    return;
   }
 
   const reader = response.body?.getReader();
@@ -41,7 +42,8 @@ export async function streamAgentResponse(
         if (data === '[DONE]') return;
         try {
           const parsed = JSON.parse(data);
-          if (parsed.text) onChunk(parsed.text);
+          if (parsed.error) onChunk(`[Error: ${parsed.error}]`);
+          else if (parsed.text) onChunk(parsed.text);
         } catch {
           // Not JSON, treat as raw text
           if (data.trim()) onChunk(data);
