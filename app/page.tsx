@@ -35,7 +35,7 @@ export default function Home() {
       </main>
 
       <footer className="text-center py-6 text-xs text-[#6E6E73]">
-        Built by Ben Yamin
+        Built by Ben Yamin | Coded with Claude Code | Live reasoning via Grok
       </footer>
     </div>
   );
