@@ -67,6 +67,7 @@ export default function ScenarioPage() {
     { stepId: string; choiceId: string; label: string; wasOptimal: boolean }[]
   >([]);
   const [decisionDisabled, setDecisionDisabled] = useState(false);
+  const [showChoices, setShowChoices] = useState(false);
 
   // Load scenario
   useEffect(() => {
@@ -221,6 +222,7 @@ export default function ScenarioPage() {
           // Advance to next step after reaction
           setTimeout(() => {
             setDecisionDisabled(false);
+            setShowChoices(false);
             setReasoningText('');
             if (currentStepIndex < instance.steps.length - 1) {
               setCurrentStepIndex((prev) => prev + 1);
@@ -240,6 +242,7 @@ export default function ScenarioPage() {
     setReasoningText('');
     setDecisions([]);
     setDecisionDisabled(false);
+    setShowChoices(false);
   };
 
   if (!scenario || !instance) {
@@ -306,11 +309,29 @@ export default function ScenarioPage() {
       {/* Decision Panel */}
       <AnimatePresence>
         {currentStep.type === 'decision' && currentStep.decision && (
-          <DecisionPanel
-            decision={currentStep.decision}
-            onChoose={handleDecision}
-            disabled={decisionDisabled || isStreaming}
-          />
+          showChoices ? (
+            <DecisionPanel
+              decision={currentStep.decision}
+              onChoose={handleDecision}
+              disabled={decisionDisabled || isStreaming}
+            />
+          ) : (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 20 }}
+              transition={{ duration: 0.4 }}
+              className="bg-white border-t border-[#D2D2D7] p-4 md:p-6 flex justify-center"
+            >
+              <button
+                onClick={() => setShowChoices(true)}
+                disabled={isStreaming}
+                className="px-8 py-3 rounded-full bg-[#0071E3] text-sm font-medium text-white hover:bg-[#0062CC] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                What are my choices?
+              </button>
+            </motion.div>
+          )
         )}
       </AnimatePresence>
     </div>
