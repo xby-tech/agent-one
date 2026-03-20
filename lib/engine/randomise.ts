@@ -1,4 +1,4 @@
-import { ScenarioVariant, ScenarioInstance, Scenario } from '@/lib/scenarios/types';
+import { ScenarioVariant, ScenarioInstance, Scenario, GeneratedScenario } from '@/lib/scenarios/types';
 import { hydrateSteps } from './hydrate';
 import { scenario1Variants } from '@/lib/variables/scenario1-variants';
 import { scenario2Variants } from '@/lib/variables/scenario2-variants';
@@ -24,4 +24,11 @@ export function initScenario(scenario: Scenario): ScenarioInstance {
   const variables = selectVariant(scenario.id);
   const steps = hydrateSteps(scenario.steps, variables);
   return { scenarioId: scenario.id, variables, steps };
+}
+
+export async function pickRandomFlow(scenarioId: string): Promise<GeneratedScenario> {
+  const res = await fetch(`/data/${scenarioId}-pool.json`);
+  if (!res.ok) throw new Error(`Failed to load pool: ${res.status}`);
+  const pool: GeneratedScenario[] = await res.json();
+  return pool[Math.floor(Math.random() * pool.length)];
 }

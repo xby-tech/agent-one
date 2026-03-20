@@ -77,6 +77,15 @@ export interface DecisionOption {
   claudeReactionPrompt: string;
 }
 
+export interface GeneratedScenario {
+  id: string;
+  humanInstruction: string;
+  variables: Record<string, string | number>;
+  keyInsight: string;
+  realWorldContext: string;
+  steps: Step[];
+}
+
 export interface ScenarioProgress {
   scenarioId: string;
   completed: boolean;

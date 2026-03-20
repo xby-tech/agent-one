@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { loadScenario } from '@/lib/scenarios';
-import { initScenario } from '@/lib/engine/randomise';
+import { initScenario, pickRandomFlow } from '@/lib/engine/randomise';
 import { streamAgentResponse, fetchAgentReview, type AgentRequest, type ReviewResult } from '@/lib/claude';
 import { isScenarioUnlocked, saveDecision, completeScenario } from '@/lib/progress';
 import type { Scenario, ScenarioInstance, Step, DecisionOption } from '@/lib/scenarios/types';
@@ -73,6 +73,9 @@ export default function ScenarioPage() {
   const [showChoices, setShowChoices] = useState(false);
   const [review, setReview] = useState<ReviewData | null>(null);
   const [reviewLoading, setReviewLoading] = useState(false);
+  const [flowHumanInstruction, setFlowHumanInstruction] = useState('');
+  const [flowKeyInsight, setFlowKeyInsight] = useState('');
+  const [flowRealWorldContext, setFlowRealWorldContext] = useState('');
 
   const reasoningTextRef = useRef('');
   const lastSavedTextRef = useRef('');
@@ -88,18 +91,31 @@ export default function ScenarioPage() {
     setCurrentReasoningLabel(newLabel);
   }, []);
 
-  // Load scenario
+  // Load scenario — pick random flow from pool, fallback to hardcoded
   useEffect(() => {
     if (!scenarioId) return;
     if (!isScenarioUnlocked(scenarioId)) {
       router.push('/');
       return;
     }
-    loadScenario(scenarioId).then((s) => {
-      setScenario(s);
-      const inst = initScenario(s);
-      setInstance(inst);
-    });
+    let cancelled = false;
+    pickRandomFlow(scenarioId)
+      .then((flow) => {
+        if (cancelled) return;
+        setInstance({ scenarioId, variables: flow.variables, steps: flow.steps });
+        setFlowHumanInstruction(flow.humanInstruction);
+        setFlowKeyInsight(flow.keyInsight);
+        setFlowRealWorldContext(flow.realWorldContext);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        loadScenario(scenarioId).then((s) => {
+          if (cancelled) return;
+          setScenario(s);
+          setInstance(initScenario(s));
+        });
+      });
+    return () => { cancelled = true; };
   }, [scenarioId, router]);
 
   const currentStep: Step | null =
@@ -107,8 +123,8 @@ export default function ScenarioPage() {
       ? instance.steps[currentStepIndex]
       : null;
 
-  const humanInstruction =
-    instance && scenario
+  const humanInstruction = flowHumanInstruction
+    || (instance && scenario
       ? scenario.humanInstructionTemplate.replace(
           /\{\{(\w+)\}\}/g,
           (_, key) => {
@@ -118,7 +134,7 @@ export default function ScenarioPage() {
             return String(val ?? '');
           }
         )
-      : '';
+      : '');
 
   // Auto-advance for briefing and data_reveal steps
   useEffect(() => {
@@ -134,7 +150,7 @@ export default function ScenarioPage() {
     }
     if (currentStep.type === 'data_reveal') {
       // Generate reasoning for data reveal
-      if (instance && scenario) {
+      if (instance) {
         saveReasoningAndReset(`Step ${currentStepIndex + 1}: Analysis`);
         setIsStreaming(true);
         const controller = new AbortController();
@@ -164,7 +180,7 @@ export default function ScenarioPage() {
       }
     } else if (currentStep.type === 'decision') {
       // Generate pre-decision reasoning
-      if (instance && scenario && !reasoningTextRef.current) {
+      if (instance && !reasoningTextRef.current) {
         saveReasoningAndReset(`Step ${currentStepIndex + 1}: Decision`);
         setIsStreaming(true);
         const controller = new AbortController();
@@ -224,7 +240,7 @@ export default function ScenarioPage() {
 
   const handleDecision = useCallback(
     (optionId: string) => {
-      if (!currentStep?.decision || !instance || !scenario) return;
+      if (!currentStep?.decision || !instance) return;
       setDecisionDisabled(true);
 
       const option = currentStep.decision.options.find((o) => o.id === optionId);
@@ -276,9 +292,7 @@ export default function ScenarioPage() {
   );
 
   const handleReplay = () => {
-    if (!scenario) return;
-    const inst = initScenario(scenario);
-    setInstance(inst);
+    setInstance(null);
     setCurrentStepIndex(0);
     setPhase('briefing');
     setReasoningText('');
@@ -292,9 +306,25 @@ export default function ScenarioPage() {
     setShowChoices(false);
     setReview(null);
     setReviewLoading(false);
+    setFlowHumanInstruction('');
+    setFlowKeyInsight('');
+    setFlowRealWorldContext('');
+    // Pick a new random flow
+    pickRandomFlow(scenarioId)
+      .then((flow) => {
+        setInstance({ scenarioId, variables: flow.variables, steps: flow.steps });
+        setFlowHumanInstruction(flow.humanInstruction);
+        setFlowKeyInsight(flow.keyInsight);
+        setFlowRealWorldContext(flow.realWorldContext);
+      })
+      .catch(() => {
+        if (scenario) {
+          setInstance(initScenario(scenario));
+        }
+      });
   };
 
-  if (!scenario || !instance) {
+  if (!instance) {
     return (
       <div className="flex-1 flex items-center justify-center bg-[#1D1D1F]">
         <div className="text-center">
@@ -324,8 +354,8 @@ export default function ScenarioPage() {
           scenarioTitle={scenarioTitles[scenarioId] || ''}
           success={decisions.filter((d) => d.wasOptimal).length >= decisions.length / 2}
           decisions={decisions}
-          keyInsight={keyInsights[scenarioId] || ''}
-          realWorldContext={realWorldContexts[scenarioId] || ''}
+          keyInsight={flowKeyInsight || keyInsights[scenarioId] || ''}
+          realWorldContext={flowRealWorldContext || realWorldContexts[scenarioId] || ''}
           nextScenarioId={nextScenarios[scenarioId]}
           onReplay={handleReplay}
           review={review}
