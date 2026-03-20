@@ -18,7 +18,7 @@ export default function AgentReasoning({ text, isStreaming }: AgentReasoningProp
   }, [text]);
 
   return (
-    <div className="h-full flex flex-col bg-[#1D1D1F] p-4 md:p-6">
+    <div className="h-full flex flex-col bg-[#0a0a0a] p-4 md:p-6">
       <div className="flex items-center gap-2 mb-4">
         <div
           className={`w-2 h-2 rounded-full ${
@@ -37,12 +37,12 @@ export default function AgentReasoning({ text, isStreaming }: AgentReasoningProp
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          className="font-mono text-[15px] text-[#F5F5F7] leading-relaxed whitespace-pre-wrap"
+          className="font-mono text-[15px] text-[#33ff33] leading-relaxed whitespace-pre-wrap"
         >
-          <span className="text-[#6E6E73] mr-2">&gt;</span>
+          <span className="text-[#1a8a1a] mr-2">&gt;</span>
           {text}
           {isStreaming && (
-            <span className="cursor-blink inline-block w-[7px] h-[15px] bg-[#34C759] ml-[2px] align-text-bottom" />
+            <span className="cursor-blink inline-block w-[7px] h-[15px] bg-[#33ff33] ml-[2px] align-text-bottom" />
           )}
         </motion.div>
       </div>
