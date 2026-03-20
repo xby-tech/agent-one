@@ -13,12 +13,13 @@ export interface VisionHistoryEntry {
 
 interface AgentVisionProps {
   history: VisionHistoryEntry[];
+  currentStepId: string;
   currentSignals: DataSignalType[];
   currentLabel: string;
   humanInstruction: string;
 }
 
-export default function AgentVision({ history, currentSignals, currentLabel, humanInstruction }: AgentVisionProps) {
+export default function AgentVision({ history, currentStepId, currentSignals, currentLabel, humanInstruction }: AgentVisionProps) {
   const [expandedIndexes, setExpandedIndexes] = useState<Set<number>>(new Set());
 
   const toggleExpanded = (index: number) => {
@@ -81,8 +82,8 @@ export default function AgentVision({ history, currentSignals, currentLabel, hum
         );
       })}
 
-      {/* Current step signals */}
-      {currentSignals.length > 0 && (
+      {/* Current step signals — skip if already in history */}
+      {currentSignals.length > 0 && !history.some((e) => e.stepId === currentStepId) && (
         <motion.div
           key={currentLabel}
           initial={{ opacity: 0, y: 10 }}

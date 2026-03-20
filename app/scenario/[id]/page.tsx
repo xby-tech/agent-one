@@ -417,6 +417,7 @@ export default function ScenarioPage() {
         <div className="flex-1 md:w-[60%] overflow-y-auto">
           <AgentVision
             history={visionHistory}
+            currentStepId={currentStep.id}
             currentSignals={currentStep.agentVisionData || []}
             currentLabel={`Step ${currentStepIndex + 1}`}
             humanInstruction={humanInstruction}
