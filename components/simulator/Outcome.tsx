@@ -113,7 +113,7 @@ export default function Outcome({
           className="bg-white rounded-2xl border border-[#D2D2D7] p-6 mb-6"
         >
           <h3 className="text-sm font-semibold text-[#1D1D1F] uppercase tracking-wider mb-4">
-            Performance Review
+            Agent-One Performance Review
           </h3>
 
           {reviewLoading ? (
