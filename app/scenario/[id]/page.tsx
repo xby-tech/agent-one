@@ -10,7 +10,7 @@ import { isScenarioUnlocked, saveDecision, completeScenario } from '@/lib/progre
 import type { Scenario, ScenarioInstance, Step, DecisionOption } from '@/lib/scenarios/types';
 import ProgressBar from '@/components/simulator/ProgressBar';
 import Briefing from '@/components/simulator/Briefing';
-import AgentVision from '@/components/simulator/AgentVision';
+import AgentVision, { type VisionHistoryEntry } from '@/components/simulator/AgentVision';
 import AgentReasoning, { type ReasoningEntry } from '@/components/simulator/AgentReasoning';
 import DecisionPanel from '@/components/simulator/DecisionPanel';
 import Outcome, { type ReviewData } from '@/components/simulator/Outcome';
@@ -75,10 +75,12 @@ export default function ScenarioPage() {
   const [showChoices, setShowChoices] = useState(false);
   const [review, setReview] = useState<ReviewData | null>(null);
   const [reviewLoading, setReviewLoading] = useState(false);
+  const [visionHistory, setVisionHistory] = useState<VisionHistoryEntry[]>([]);
   const [flowHumanInstruction, setFlowHumanInstruction] = useState('');
   const [flowKeyInsight, setFlowKeyInsight] = useState('');
   const [flowRealWorldContext, setFlowRealWorldContext] = useState('');
 
+  const prevStepRef = useRef<{ id: string; label: string; signals: import('@/lib/scenarios/types').DataSignal[] } | null>(null);
   const reasoningTextRef = useRef('');
   const lastSavedTextRef = useRef('');
   const saveReasoningAndReset = useCallback((newLabel: string) => {
@@ -145,6 +147,19 @@ export default function ScenarioPage() {
   // Auto-advance for briefing and data_reveal steps
   useEffect(() => {
     if (!currentStep || phase !== 'active') return;
+
+    // Save previous step's vision data to history
+    if (prevStepRef.current && prevStepRef.current.id !== currentStep.id && prevStepRef.current.signals.length > 0) {
+      setVisionHistory((h) => {
+        if (h.some((e) => e.stepId === prevStepRef.current!.id)) return h;
+        return [...h, { stepId: prevStepRef.current!.id, label: prevStepRef.current!.label, signals: prevStepRef.current!.signals }];
+      });
+    }
+    prevStepRef.current = {
+      id: currentStep.id,
+      label: `Step ${currentStepIndex + 1}`,
+      signals: currentStep.agentVisionData || [],
+    };
     if (currentStep.type === 'briefing') {
       // Briefing step in active phase: auto-advance after a short delay
       const timer = setTimeout(() => {
@@ -319,6 +334,8 @@ export default function ScenarioPage() {
     setShowChoices(false);
     setReview(null);
     setReviewLoading(false);
+    setVisionHistory([]);
+    prevStepRef.current = null;
     setFlowHumanInstruction('');
     setFlowKeyInsight('');
     setFlowRealWorldContext('');
@@ -391,7 +408,12 @@ export default function ScenarioPage() {
       <div className="flex-1 flex flex-col md:flex-row min-h-0">
         {/* Agent Vision - Left Panel */}
         <div className="flex-1 md:w-[60%] overflow-y-auto">
-          <AgentVision step={currentStep} humanInstruction={humanInstruction} />
+          <AgentVision
+            history={visionHistory}
+            currentSignals={currentStep.agentVisionData || []}
+            currentLabel={`Step ${currentStepIndex + 1}`}
+            humanInstruction={humanInstruction}
+          />
         </div>
 
         {/* Agent Reasoning - Right Panel */}
