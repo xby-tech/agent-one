@@ -64,11 +64,13 @@ export default function ScenarioPage() {
   const [reasoningText, setReasoningText] = useState('');
   const [isStreaming, setIsStreaming] = useState(false);
   const [reasoningHistory, setReasoningHistory] = useState<ReasoningEntry[]>([]);
+  const reasoningHistoryRef = useRef(reasoningHistory);
   const [currentReasoningLabel, setCurrentReasoningLabel] = useState('');
   const reasoningLabelRef = useRef('');
   const [decisions, setDecisions] = useState<
     { stepId: string; choiceId: string; label: string; wasOptimal: boolean }[]
   >([]);
+  const decisionsRef = useRef(decisions);
   const [decisionDisabled, setDecisionDisabled] = useState(false);
   const [showChoices, setShowChoices] = useState(false);
   const [review, setReview] = useState<ReviewData | null>(null);
@@ -83,7 +85,11 @@ export default function ScenarioPage() {
     const text = reasoningTextRef.current;
     if (text.trim() && text !== lastSavedTextRef.current) {
       lastSavedTextRef.current = text;
-      setReasoningHistory((h) => [...h, { label: reasoningLabelRef.current || 'Reasoning', text }]);
+      setReasoningHistory((h) => {
+        const next = [...h, { label: reasoningLabelRef.current || 'Reasoning', text }];
+        reasoningHistoryRef.current = next;
+        return next;
+      });
     }
     reasoningTextRef.current = '';
     setReasoningText('');
@@ -203,17 +209,18 @@ export default function ScenarioPage() {
     } else if (currentStep.type === 'outcome') {
       setPhase('outcome');
       if (instance) {
-        const optimalCount = decisions.filter((d) => d.wasOptimal).length;
-        const score = Math.round((optimalCount / Math.max(decisions.length, 1)) * 100);
+        const currentDecisions = decisionsRef.current;
+        const optimalCount = currentDecisions.filter((d) => d.wasOptimal).length;
+        const score = Math.round((optimalCount / Math.max(currentDecisions.length, 1)) * 100);
         completeScenario(scenarioId, score);
 
         // Build reasoning log from history + current text
         const fullLog = [
-          ...reasoningHistory.map((e) => `[${e.label}]\n${e.text}`),
+          ...reasoningHistoryRef.current.map((e) => `[${e.label}]\n${e.text}`),
           ...(reasoningTextRef.current.trim() ? [`[Current]\n${reasoningTextRef.current}`] : []),
         ].join('\n\n');
 
-        const decisionSummary = decisions
+        const decisionSummary = currentDecisions
           .map((d, i) => `Decision ${i + 1}: ${d.label} (${d.wasOptimal ? 'optimal' : 'suboptimal'})`)
           .join('\n');
 
@@ -247,15 +254,19 @@ export default function ScenarioPage() {
       if (!option) return;
 
       saveDecision(scenarioId, currentStep.id, optionId);
-      setDecisions((prev) => [
-        ...prev,
-        {
-          stepId: currentStep.id,
-          choiceId: optionId,
-          label: option.label,
-          wasOptimal: option.isOptimal ?? false,
-        },
-      ]);
+      setDecisions((prev) => {
+        const next = [
+          ...prev,
+          {
+            stepId: currentStep.id,
+            choiceId: optionId,
+            label: option.label,
+            wasOptimal: option.isOptimal ?? false,
+          },
+        ];
+        decisionsRef.current = next;
+        return next;
+      });
 
       // Stream reaction - save current reasoning first
       saveReasoningAndReset(`Reaction: ${option.label}`);
@@ -297,11 +308,13 @@ export default function ScenarioPage() {
     setPhase('briefing');
     setReasoningText('');
     setReasoningHistory([]);
+    reasoningHistoryRef.current = [];
     setCurrentReasoningLabel('');
     reasoningLabelRef.current = '';
     reasoningTextRef.current = '';
     lastSavedTextRef.current = '';
     setDecisions([]);
+    decisionsRef.current = [];
     setDecisionDisabled(false);
     setShowChoices(false);
     setReview(null);
