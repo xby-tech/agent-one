@@ -78,7 +78,7 @@ export default function ScenarioPage() {
     const text = reasoningTextRef.current;
     if (text.trim() && text !== lastSavedTextRef.current) {
       lastSavedTextRef.current = text;
-      setReasoningHistory((h) => [...h, { label: oldLabel || 'Reasoning', text }]);
+      setReasoningHistory((h) => [...h, { label: reasoningLabelRef.current || 'Reasoning', text }]);
     }
     reasoningTextRef.current = '';
     setReasoningText('');
