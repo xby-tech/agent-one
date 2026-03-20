@@ -412,9 +412,9 @@ export default function ScenarioPage() {
         scenarioTitle={scenarioTitles[scenarioId] || ''}
       />
 
-      <div className="flex-1 flex flex-col md:flex-row min-h-0">
-        {/* Agent Vision - Left Panel */}
-        <div className="flex-1 md:w-[60%] overflow-y-auto">
+      <div className="flex-1 flex flex-col md:flex-row min-h-0 overflow-hidden">
+        {/* Agent Vision - Left/Top Panel */}
+        <div className="h-[calc(55dvh-40px)] md:h-auto md:flex-1 md:w-[60%] overflow-y-auto">
           <AgentVision
             history={visionHistory}
             currentStepId={currentStep.id}
@@ -424,8 +424,8 @@ export default function ScenarioPage() {
           />
         </div>
 
-        {/* Agent Reasoning - Right Panel */}
-        <div className="md:w-[40%] min-h-[200px] md:min-h-0">
+        {/* Agent Reasoning - Right/Bottom Panel */}
+        <div className="h-[calc(45dvh-40px)] md:h-auto md:flex-1 md:w-[40%] overflow-y-auto">
           <AgentReasoning history={reasoningHistory} text={reasoningText} isStreaming={isStreaming} currentLabel={currentReasoningLabel} />
         </div>
       </div>
