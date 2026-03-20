@@ -1,0 +1,62 @@
+@import "tailwindcss";
+
+:root {
+  --bg-primary: #FAFAFA;
+  --bg-card: #FFFFFF;
+  --bg-agent-vision: #F5F5F7;
+  --bg-reasoning: #1D1D1F;
+  --text-primary: #1D1D1F;
+  --text-secondary: #6E6E73;
+  --text-reasoning: #F5F5F7;
+  --accent-blue: #0071E3;
+  --accent-green: #34C759;
+  --accent-amber: #FF9F0A;
+  --accent-red: #FF3B30;
+  --border: #D2D2D7;
+  --code-bg: #F5F5F7;
+}
+
+@theme inline {
+  --color-background: var(--bg-primary);
+  --color-foreground: var(--text-primary);
+  --color-card: var(--bg-card);
+  --color-vision: var(--bg-agent-vision);
+  --color-reasoning: var(--bg-reasoning);
+  --color-secondary: var(--text-secondary);
+  --color-reasoning-text: var(--text-reasoning);
+  --color-accent: var(--accent-blue);
+  --color-success: var(--accent-green);
+  --color-warning: var(--accent-amber);
+  --color-error: var(--accent-red);
+  --color-border: var(--border);
+  --color-code-bg: var(--code-bg);
+  --font-sans: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', sans-serif;
+  --font-mono: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+}
+
+body {
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+}
+
+/* Custom scrollbar for reasoning panel */
+.reasoning-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+.reasoning-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.reasoning-scroll::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.2);
+  border-radius: 3px;
+}
+
+/* Typewriter cursor blink */
+@keyframes blink {
+  0%, 50% { opacity: 1; }
+  51%, 100% { opacity: 0; }
+}
+.cursor-blink {
+  animation: blink 1s infinite;
+}
