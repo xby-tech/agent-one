@@ -38,13 +38,12 @@ Narrate what happens next from the agent's perspective. Describe the technical p
 }
 
 export function buildReviewPrompt(claudeContext: string, reasoningLog: string): string {
-  return `Here is the complete reasoning log from this scenario run:
-
-${reasoningLog}
+  const logSection = reasoningLog ? `\nReasoning context:\n${reasoningLog}\n` : '';
+  return `Here are the decisions made during this scenario:
 
 ${claudeContext}
-
-Based on the reasoning log and decisions above, provide a brief performance review. Respond in EXACTLY this JSON format, no other text:
+${logSection}
+Based on the decisions above, provide a brief performance review. Respond in EXACTLY this JSON format, no other text:
 {"right":["bullet 1","bullet 2","bullet 3"],"wrong":["bullet 1","bullet 2"]}
 
 Rules:

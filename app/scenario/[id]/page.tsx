@@ -228,29 +228,6 @@ export default function ScenarioPage() {
         const optimalCount = currentDecisions.filter((d) => d.wasOptimal).length;
         const score = Math.round((optimalCount / Math.max(currentDecisions.length, 1)) * 100);
         completeScenario(scenarioId, score);
-
-        // Build reasoning log from history + current text
-        const fullLog = [
-          ...reasoningHistoryRef.current.map((e) => `[${e.label}]\n${e.text}`),
-          ...(reasoningTextRef.current.trim() ? [`[Current]\n${reasoningTextRef.current}`] : []),
-        ].join('\n\n');
-
-        const decisionSummary = currentDecisions
-          .map((d, i) => `Decision ${i + 1}: ${d.label} (${d.wasOptimal ? 'optimal' : 'suboptimal'})`)
-          .join('\n');
-
-        setReviewLoading(true);
-        fetchAgentReview({
-          scenarioId,
-          scenarioTitle: scenarioTitles[scenarioId] || '',
-          variables: instance.variables,
-          claudeContext: decisionSummary,
-          type: 'review',
-          reasoningLog: fullLog,
-        }).then((result) => {
-          setReview(result);
-          setReviewLoading(false);
-        });
       }
     }
 
@@ -259,6 +236,36 @@ export default function ScenarioPage() {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentStepIndex, phase]);
+
+  // Fetch review when outcome phase is reached
+  useEffect(() => {
+    if (phase !== 'outcome' || !instance) return;
+    const currentDecisions = decisionsRef.current;
+    if (currentDecisions.length === 0) return;
+
+    const fullLog = [
+      ...reasoningHistoryRef.current.map((e) => `[${e.label}]\n${e.text}`),
+      ...(reasoningTextRef.current.trim() ? [`[Current]\n${reasoningTextRef.current}`] : []),
+    ].join('\n\n');
+
+    const decisionSummary = currentDecisions
+      .map((d, i) => `Decision ${i + 1}: ${d.label} (${d.wasOptimal ? 'optimal' : 'suboptimal'})`)
+      .join('\n');
+
+    setReviewLoading(true);
+    fetchAgentReview({
+      scenarioId,
+      scenarioTitle: scenarioTitles[scenarioId] || '',
+      variables: instance.variables,
+      claudeContext: decisionSummary,
+      type: 'review',
+      reasoningLog: fullLog,
+    }).then((result) => {
+      setReview(result);
+      setReviewLoading(false);
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase]);
 
   const handleDecision = useCallback(
     (optionId: string) => {

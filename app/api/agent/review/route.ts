@@ -11,14 +11,23 @@ export async function POST(request: Request) {
   let body: AgentRequest;
   try {
     body = await request.json();
-  } catch {
+  } catch (e) {
+    console.error('Review body parse failed:', e);
     return Response.json({ right: ['Completed the scenario'], wrong: [] }, { status: 200 });
   }
 
   const { scenarioTitle, variables, claudeContext, reasoningLog } = body;
 
-  const systemPrompt = buildSystemPrompt(scenarioTitle, variables);
-  const userPrompt = buildReviewPrompt(claudeContext, reasoningLog || '');
+  // Grok's data leakage filter blocks reasoning logs containing card numbers
+  // and addresses. Only send the decision summary (no PII) instead of the full log.
+  const safeVariables: Record<string, string | number | string[]> = {};
+  for (const [k, v] of Object.entries(variables)) {
+    if (['cardLast4', 'shippingAddress', 'address', 'expiry'].includes(k)) continue;
+    safeVariables[k] = v;
+  }
+
+  const systemPrompt = buildSystemPrompt(scenarioTitle, safeVariables);
+  const userPrompt = buildReviewPrompt(claudeContext, '');
 
   const client = new OpenAI({
     apiKey,
@@ -39,11 +48,15 @@ export async function POST(request: Request) {
     // Extract JSON from response (may have markdown code fences)
     const jsonMatch = content.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
-      const parsed = JSON.parse(jsonMatch[0]);
-      return Response.json({
-        right: Array.isArray(parsed.right) ? parsed.right : [],
-        wrong: Array.isArray(parsed.wrong) ? parsed.wrong : [],
-      });
+      try {
+        const parsed = JSON.parse(jsonMatch[0]);
+        return Response.json({
+          right: Array.isArray(parsed.right) ? parsed.right : [],
+          wrong: Array.isArray(parsed.wrong) ? parsed.wrong : [],
+        });
+      } catch {
+        // JSON parse failed
+      }
     }
 
     return Response.json({ right: ['Completed the scenario'], wrong: [] });
