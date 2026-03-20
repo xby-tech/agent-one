@@ -11,7 +11,7 @@ import type { Scenario, ScenarioInstance, Step, DecisionOption } from '@/lib/sce
 import ProgressBar from '@/components/simulator/ProgressBar';
 import Briefing from '@/components/simulator/Briefing';
 import AgentVision from '@/components/simulator/AgentVision';
-import AgentReasoning from '@/components/simulator/AgentReasoning';
+import AgentReasoning, { type ReasoningEntry } from '@/components/simulator/AgentReasoning';
 import DecisionPanel from '@/components/simulator/DecisionPanel';
 import Outcome from '@/components/simulator/Outcome';
 
@@ -63,11 +63,28 @@ export default function ScenarioPage() {
   const [phase, setPhase] = useState<'briefing' | 'active' | 'outcome'>('briefing');
   const [reasoningText, setReasoningText] = useState('');
   const [isStreaming, setIsStreaming] = useState(false);
+  const [reasoningHistory, setReasoningHistory] = useState<ReasoningEntry[]>([]);
+  const [currentReasoningLabel, setCurrentReasoningLabel] = useState('');
+  const reasoningLabelRef = useRef('');
   const [decisions, setDecisions] = useState<
     { stepId: string; choiceId: string; label: string; wasOptimal: boolean }[]
   >([]);
   const [decisionDisabled, setDecisionDisabled] = useState(false);
   const [showChoices, setShowChoices] = useState(false);
+
+  const reasoningTextRef = useRef('');
+  const lastSavedTextRef = useRef('');
+  const saveReasoningAndReset = useCallback((newLabel: string) => {
+    const text = reasoningTextRef.current;
+    if (text.trim() && text !== lastSavedTextRef.current) {
+      lastSavedTextRef.current = text;
+      setReasoningHistory((h) => [...h, { label: oldLabel || 'Reasoning', text }]);
+    }
+    reasoningTextRef.current = '';
+    setReasoningText('');
+    reasoningLabelRef.current = newLabel;
+    setCurrentReasoningLabel(newLabel);
+  }, []);
 
   // Load scenario
   useEffect(() => {
@@ -116,7 +133,7 @@ export default function ScenarioPage() {
     if (currentStep.type === 'data_reveal') {
       // Generate reasoning for data reveal
       if (instance && scenario) {
-        setReasoningText('');
+        saveReasoningAndReset(`Step ${currentStepIndex + 1}: Analysis`);
         setIsStreaming(true);
         const controller = new AbortController();
         abortRef.current = controller;
@@ -129,7 +146,7 @@ export default function ScenarioPage() {
         };
         streamAgentResponse(
           request,
-          (text) => setReasoningText((prev) => prev + text),
+          (text) => { reasoningTextRef.current += text; setReasoningText((prev) => prev + text); },
           controller.signal
         )
           .catch(() => {})
@@ -145,8 +162,8 @@ export default function ScenarioPage() {
       }
     } else if (currentStep.type === 'decision') {
       // Generate pre-decision reasoning
-      if (instance && scenario && !reasoningText) {
-        setReasoningText('');
+      if (instance && scenario && !reasoningTextRef.current) {
+        saveReasoningAndReset(`Step ${currentStepIndex + 1}: Decision`);
         setIsStreaming(true);
         const controller = new AbortController();
         abortRef.current = controller;
@@ -159,7 +176,7 @@ export default function ScenarioPage() {
         };
         streamAgentResponse(
           request,
-          (text) => setReasoningText((prev) => prev + text),
+          (text) => { reasoningTextRef.current += text; setReasoningText((prev) => prev + text); },
           controller.signal
         )
           .catch(() => {})
@@ -199,8 +216,8 @@ export default function ScenarioPage() {
         },
       ]);
 
-      // Stream reaction
-      setReasoningText('');
+      // Stream reaction - save current reasoning first
+      saveReasoningAndReset(`Reaction: ${option.label}`);
       setIsStreaming(true);
       const controller = new AbortController();
       abortRef.current = controller;
@@ -213,7 +230,7 @@ export default function ScenarioPage() {
       };
       streamAgentResponse(
         request,
-        (text) => setReasoningText((prev) => prev + text),
+        (text) => { reasoningTextRef.current += text; setReasoningText((prev) => prev + text); },
         controller.signal
       )
         .catch(() => {})
@@ -223,7 +240,7 @@ export default function ScenarioPage() {
           setTimeout(() => {
             setDecisionDisabled(false);
             setShowChoices(false);
-            setReasoningText('');
+            saveReasoningAndReset('');
             if (currentStepIndex < instance.steps.length - 1) {
               setCurrentStepIndex((prev) => prev + 1);
             }
@@ -240,6 +257,11 @@ export default function ScenarioPage() {
     setCurrentStepIndex(0);
     setPhase('briefing');
     setReasoningText('');
+    setReasoningHistory([]);
+    setCurrentReasoningLabel('');
+    reasoningLabelRef.current = '';
+    reasoningTextRef.current = '';
+    lastSavedTextRef.current = '';
     setDecisions([]);
     setDecisionDisabled(false);
     setShowChoices(false);
@@ -302,7 +324,7 @@ export default function ScenarioPage() {
 
         {/* Agent Reasoning - Right Panel */}
         <div className="md:w-[40%] min-h-[200px] md:min-h-0">
-          <AgentReasoning text={reasoningText} isStreaming={isStreaming} />
+          <AgentReasoning history={reasoningHistory} text={reasoningText} isStreaming={isStreaming} currentLabel={currentReasoningLabel} />
         </div>
       </div>
 
