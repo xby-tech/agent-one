@@ -5,7 +5,33 @@ export interface AgentRequest {
   scenarioTitle: string;
   variables: ScenarioVariant;
   claudeContext: string;
-  type: 'reasoning' | 'reaction';
+  type: 'reasoning' | 'reaction' | 'review';
+  reasoningLog?: string;
+}
+
+export interface ReviewResult {
+  right: string[];
+  wrong: string[];
+}
+
+export async function fetchAgentReview(
+  request: AgentRequest
+): Promise<ReviewResult> {
+  const response = await fetch('/api/agent/review', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(request),
+  });
+
+  if (!response.ok) {
+    return { right: ['Completed the scenario'], wrong: ['Could not generate review'] };
+  }
+
+  try {
+    return await response.json();
+  } catch {
+    return { right: ['Completed the scenario'], wrong: ['Could not generate review'] };
+  }
 }
 
 export async function streamAgentResponse(

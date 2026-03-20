@@ -1,5 +1,5 @@
 import OpenAI from 'openai';
-import { buildSystemPrompt, buildReasoningPrompt, buildReactionPrompt } from '@/lib/prompts';
+import { buildSystemPrompt, buildReasoningPrompt, buildReactionPrompt, buildReviewPrompt } from '@/lib/prompts';
 import { AgentRequest } from '@/lib/claude';
 
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
@@ -36,13 +36,17 @@ export async function POST(request: Request) {
     return new Response('Invalid request body', { status: 400 });
   }
 
-  const { scenarioTitle, variables, claudeContext, type } = body;
+  const { scenarioTitle, variables, claudeContext, type, reasoningLog } = body;
 
   const systemPrompt = buildSystemPrompt(scenarioTitle, variables);
-  const userPrompt =
-    type === 'reasoning'
-      ? buildReasoningPrompt(claudeContext)
-      : buildReactionPrompt(claudeContext);
+  let userPrompt: string;
+  if (type === 'review') {
+    userPrompt = buildReviewPrompt(claudeContext, reasoningLog || '');
+  } else if (type === 'reasoning') {
+    userPrompt = buildReasoningPrompt(claudeContext);
+  } else {
+    userPrompt = buildReactionPrompt(claudeContext);
+  }
 
   const client = new OpenAI({
     apiKey,

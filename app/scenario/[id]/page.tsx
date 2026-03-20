@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { loadScenario } from '@/lib/scenarios';
 import { initScenario } from '@/lib/engine/randomise';
-import { streamAgentResponse, type AgentRequest } from '@/lib/claude';
+import { streamAgentResponse, fetchAgentReview, type AgentRequest, type ReviewResult } from '@/lib/claude';
 import { isScenarioUnlocked, saveDecision, completeScenario } from '@/lib/progress';
 import type { Scenario, ScenarioInstance, Step, DecisionOption } from '@/lib/scenarios/types';
 import ProgressBar from '@/components/simulator/ProgressBar';
@@ -13,7 +13,7 @@ import Briefing from '@/components/simulator/Briefing';
 import AgentVision from '@/components/simulator/AgentVision';
 import AgentReasoning, { type ReasoningEntry } from '@/components/simulator/AgentReasoning';
 import DecisionPanel from '@/components/simulator/DecisionPanel';
-import Outcome from '@/components/simulator/Outcome';
+import Outcome, { type ReviewData } from '@/components/simulator/Outcome';
 
 const scenarioTitles: Record<string, string> = {
   'scenario-1': 'Scenario 1: Buy This For Me',
@@ -71,6 +71,8 @@ export default function ScenarioPage() {
   >([]);
   const [decisionDisabled, setDecisionDisabled] = useState(false);
   const [showChoices, setShowChoices] = useState(false);
+  const [review, setReview] = useState<ReviewData | null>(null);
+  const [reviewLoading, setReviewLoading] = useState(false);
 
   const reasoningTextRef = useRef('');
   const lastSavedTextRef = useRef('');
@@ -188,6 +190,29 @@ export default function ScenarioPage() {
         const optimalCount = decisions.filter((d) => d.wasOptimal).length;
         const score = Math.round((optimalCount / Math.max(decisions.length, 1)) * 100);
         completeScenario(scenarioId, score);
+
+        // Build reasoning log from history + current text
+        const fullLog = [
+          ...reasoningHistory.map((e) => `[${e.label}]\n${e.text}`),
+          ...(reasoningTextRef.current.trim() ? [`[Current]\n${reasoningTextRef.current}`] : []),
+        ].join('\n\n');
+
+        const decisionSummary = decisions
+          .map((d, i) => `Decision ${i + 1}: ${d.label} (${d.wasOptimal ? 'optimal' : 'suboptimal'})`)
+          .join('\n');
+
+        setReviewLoading(true);
+        fetchAgentReview({
+          scenarioId,
+          scenarioTitle: scenarioTitles[scenarioId] || '',
+          variables: instance.variables,
+          claudeContext: decisionSummary,
+          type: 'review',
+          reasoningLog: fullLog,
+        }).then((result) => {
+          setReview(result);
+          setReviewLoading(false);
+        });
       }
     }
 
@@ -265,6 +290,8 @@ export default function ScenarioPage() {
     setDecisions([]);
     setDecisionDisabled(false);
     setShowChoices(false);
+    setReview(null);
+    setReviewLoading(false);
   };
 
   if (!scenario || !instance) {
@@ -301,6 +328,8 @@ export default function ScenarioPage() {
           realWorldContext={realWorldContexts[scenarioId] || ''}
           nextScenarioId={nextScenarios[scenarioId]}
           onReplay={handleReplay}
+          review={review}
+          reviewLoading={reviewLoading}
         />
       </div>
     );

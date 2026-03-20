@@ -11,6 +11,11 @@ interface OutcomeDecision {
   wasOptimal: boolean;
 }
 
+export interface ReviewData {
+  right: string[];
+  wrong: string[];
+}
+
 interface OutcomeProps {
   scenarioId: string;
   scenarioTitle: string;
@@ -20,6 +25,8 @@ interface OutcomeProps {
   realWorldContext: string;
   nextScenarioId?: string;
   onReplay: () => void;
+  review: ReviewData | null;
+  reviewLoading: boolean;
 }
 
 export default function Outcome({
@@ -30,6 +37,8 @@ export default function Outcome({
   realWorldContext,
   nextScenarioId,
   onReplay,
+  review,
+  reviewLoading,
 }: OutcomeProps) {
   const optimalCount = decisions.filter((d) => d.wasOptimal).length;
   const score = Math.round((optimalCount / decisions.length) * 100);
@@ -94,6 +103,58 @@ export default function Outcome({
               </div>
             ))}
           </div>
+        </motion.div>
+
+        {/* Performance Review */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4 }}
+          className="bg-white rounded-2xl border border-[#D2D2D7] p-6 mb-6"
+        >
+          <h3 className="text-sm font-semibold text-[#1D1D1F] uppercase tracking-wider mb-4">
+            Performance Review
+          </h3>
+
+          {reviewLoading ? (
+            <div className="flex items-center gap-3 py-4 justify-center">
+              <div className="w-4 h-4 border-2 border-[#0071E3] border-t-transparent rounded-full animate-spin" />
+              <span className="text-sm text-[#6E6E73]">Grok is reviewing your decisions...</span>
+            </div>
+          ) : review ? (
+            <div className="space-y-4">
+              {review.right.length > 0 && (
+                <div>
+                  <h4 className="text-xs font-semibold text-[#34C759] uppercase tracking-wider mb-2">
+                    What went right
+                  </h4>
+                  <ul className="space-y-1.5">
+                    {review.right.map((item, i) => (
+                      <li key={i} className="flex items-start gap-2 text-sm text-[#1D1D1F]">
+                        <span className="text-[#34C759] mt-0.5 shrink-0">+</span>
+                        <span>{item}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {review.wrong.length > 0 && (
+                <div>
+                  <h4 className="text-xs font-semibold text-[#FF9F0A] uppercase tracking-wider mb-2">
+                    What could improve
+                  </h4>
+                  <ul className="space-y-1.5">
+                    {review.wrong.map((item, i) => (
+                      <li key={i} className="flex items-start gap-2 text-sm text-[#1D1D1F]">
+                        <span className="text-[#FF9F0A] mt-0.5 shrink-0">-</span>
+                        <span>{item}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          ) : null}
         </motion.div>
 
         {/* Key insight */}
