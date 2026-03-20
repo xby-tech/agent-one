@@ -46,7 +46,7 @@ export default function AgentReasoning({ history, text, isStreaming, currentLabe
           }`}
         />
         <h2 className="text-xs font-mono font-semibold text-[#6E6E73] tracking-widest uppercase">
-          Agent Reasoning
+          Agent Reasoning <span className="normal-case tracking-normal">(Grok 4.1)</span>
         </h2>
       </div>
 
